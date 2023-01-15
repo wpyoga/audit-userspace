@@ -43,6 +43,9 @@
 #ifdef HAVE_LIBCAP_NG
 #include <cap-ng.h>
 #endif
+#ifdef WITH_IO_URING
+#include <linux/io_uring.h>
+#endif
 #include "libaudit.h"
 #include "private.h"
 #include "errormsg.h"
@@ -50,6 +53,9 @@
 
 /* #defines for the audit failure query  */
 #define CONFIG_FILE "/etc/libaudit.conf"
+#ifndef IORING_OP_LAST
+#define IORING_OP_LAST 37
+#endif
 
 /* Local prototypes */
 struct nv_pair
@@ -997,6 +1003,7 @@ int audit_rule_syscall_data(struct audit_rule_data *rule, int scall)
 	if (word > (AUDIT_BITMASK_SIZE-1))
 		return -1;
 	rule->mask[word] |= bit;
+	_audit_syscalladded = 1;
 	return 0;
 }
 
@@ -1024,6 +1031,32 @@ int audit_rule_syscallbyname_data(struct audit_rule_data *rule,
 	}
 	if (nr >= 0)
 		return audit_rule_syscall_data(rule, nr);
+	return -1;
+}
+
+int audit_rule_io_uringbyname_data(struct audit_rule_data *rule,
+                                  const char *scall)
+{
+#ifdef WITH_IO_URING
+	int nr;
+
+	if (!strcmp(scall, "all")) {
+		int i, rc = 0;
+		for (i = 0; i < IORING_OP_LAST && !rc; i++) {
+			// while names resolve
+			if (audit_uringop_to_name(i))
+				rc = audit_rule_syscall_data(rule, i);
+		}
+		return rc;
+	}
+	nr = audit_name_to_uringop(scall);
+	if (nr < 0) {
+		if (isdigit(scall[0]))
+			nr = strtol(scall, NULL, 0);
+	}
+	if (nr >= 0)
+		return audit_rule_syscall_data(rule, nr);
+#endif
 	return -1;
 }
 
@@ -1427,6 +1460,7 @@ int audit_determine_machine(const char *arch)
 		case MACH_86_64:   /* fallthrough */
 		case MACH_PPC64:   /* fallthrough */
 		case MACH_S390X:   /* fallthrough */
+		case MACH_IO_URING:
 			break;
 		case MACH_PPC64LE: /* 64 bit only */
 			if (bits && bits != __AUDIT_ARCH_64BIT)
@@ -1502,13 +1536,11 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 	if ((field = audit_name_to_field(f)) < 0)
 		return -EAU_FIELDUNKNOWN;
 
-	/* Exclude filter can be used only with MSGTYPE, cred and EXE fields */
+	/* Exclude filter can be used only with MSGTYPE, cred, and EXE fields
+	 * when the EXTEND Feature is not present. */
 	if (flags == AUDIT_FILTER_EXCLUDE) {
 		uint32_t features = audit_get_features();
 		if ((features & AUDIT_FEATURE_BITMAP_EXCLUDE_EXTEND) == 0) {
-			if (field != AUDIT_MSGTYPE)
-				return -EAU_FIELDNOSUPPORT;
-		} else {
 			switch(field) {
 				case AUDIT_PID:
 				case AUDIT_UID:
@@ -1707,7 +1739,8 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 			_audit_archadded = 1;
 			break;
 		case AUDIT_PERM:
-			if (flags != AUDIT_FILTER_EXIT)
+			if (!(flags == AUDIT_FILTER_EXIT ||
+			      flags == AUDIT_FILTER_EXCLUDE))
 				return -EAU_EXITONLY;
 			else if (op != AUDIT_EQUAL)
 				return -EAU_OPEQ;

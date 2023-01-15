@@ -46,6 +46,9 @@
 #include "s390_tables.h"
 #include "s390x_tables.h"
 #include "x86_64_tables.h"
+#ifdef WITH_IO_URING
+#include "uringop_tables.h"
+#endif
 #include "errtabs.h"
 #include "fstypetabs.h"
 #include "ftypetabs.h"
@@ -99,6 +102,20 @@ const char *audit_field_to_name(int field)
 #endif
 }
 
+int audit_name_to_uringop(const char *uringop)
+{
+#ifdef WITH_IO_URING
+	int res = -1, found = 0;
+
+#ifndef NO_TABLES
+	found = uringop_s2i(uringop, &res);
+#endif
+	if (found)
+		return res;
+#endif
+	return -1;
+}
+
 int audit_name_to_syscall(const char *sc, int machine)
 {
 	int res = -1, found = 0;
@@ -134,12 +151,25 @@ int audit_name_to_syscall(const char *sc, int machine)
 			break;
 #endif
 #endif
+		case MACH_IO_URING:
+			return audit_name_to_uringop(sc);
+			break;
 		default:
 			return -1;
 	}
 	if (found)
 		return res;
 	return -1;
+}
+
+const char *audit_uringop_to_name(int uringop)
+{
+#ifdef WITH_IO_URING
+#ifndef NO_TABLES
+	return uringop_i2s(uringop);
+#endif
+#endif
+	return NULL;
 }
 
 const char *audit_syscall_to_name(int sc, int machine)
@@ -167,6 +197,8 @@ const char *audit_syscall_to_name(int sc, int machine)
 	        case MACH_AARCH64:
 			return aarch64_syscall_i2s(sc);
 #endif
+		case MACH_IO_URING:
+			return audit_uringop_to_name(sc);
 	}
 #endif
 	return NULL;

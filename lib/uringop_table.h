@@ -1,5 +1,5 @@
-/* machine.h --
- * Copyright 2005-06,2009,2012-13,2022 Red Hat Inc.
+/* uringop_table.h --
+ * Copyright 2005-22 Red Hat Inc.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -17,32 +17,30 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Authors:
- *      Steve Grubb <sgrubb@redhat.com>
+ *      Richard Guy Briggs <rgb@redhat.com>
  */
-#include "config.h"
-_S(MACH_X86,     "i386"   )
-_S(MACH_X86,     "i486"   )
-_S(MACH_X86,     "i586"   )
-_S(MACH_X86,     "i686"   )
-_S(MACH_86_64,   "x86_64" )
-_S(MACH_PPC64,   "ppc64"  )
-_S(MACH_PPC64LE, "ppc64le")
-_S(MACH_PPC,     "ppc"    )
-_S(MACH_S390X,   "s390x"  )
-_S(MACH_S390,    "s390"   )
-#ifdef WITH_ARM
-_S(MACH_ARM,   "armeb"  )
-_S(MACH_ARM,   "arm"  )
-_S(MACH_ARM,   "armv5tejl")
-_S(MACH_ARM,   "armv5tel")
-_S(MACH_ARM,   "armv6l")
-_S(MACH_ARM,   "armv7l")
-#endif
-#ifdef WITH_AARCH64
-_S(MACH_AARCH64,   "aarch64"  )
-_S(MACH_AARCH64,   "armv8l")
-#endif
-#ifdef WITH_IO_URING
-_S(MACH_IO_URING,   "uring")
-#endif
+
+/*
+ *  From /usr/include/linux/io_uring.h
+ *
+ *  Note: not all ops are auditable for performance reasons. This was
+ *  discussed on the linux-audit mail list:
+ *  https://listman.redhat.com/archives/linux-audit/2021-June/018042.html
+ */
+
+_S(9,	"sendmsg")
+_S(10,	"recvmsg")
+_S(13,	"accept")
+_S(16,	"connect")
+_S(17,	"fallocate")
+_S(18,	"openat")
+_S(19,	"close")
+_S(25,	"madvise")
+_S(28,	"openat2")
+_S(34,	"shutdown")
+_S(35,	"renameat")
+_S(36,	"unlinkat")
+_S(37,  "mkdirat")
+_S(38,  "symlinkat")
+_S(39,  "linkat")
 

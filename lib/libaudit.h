@@ -344,6 +344,9 @@ extern "C" {
 #ifndef AUDIT_FILTER_FS
 #define AUDIT_FILTER_FS		0x06 /* FS record filter in __audit_inode_child */
 #endif
+#ifndef AUDIT_FILTER_URING_EXIT
+#define AUDIT_FILTER_URING_EXIT 0x07 /* Apply rule at io_uring op exit */
+#endif
 #ifndef AUDIT_FILTER_EXCLUDE
 #define AUDIT_FILTER_EXCLUDE	AUDIT_FILTER_TYPE
 #endif
@@ -585,7 +588,8 @@ typedef enum {
 	MACH_ALPHA,	// Deprecated but has to stay
 	MACH_ARM,
 	MACH_AARCH64,
-	MACH_PPC64LE
+	MACH_PPC64LE,
+	MACH_IO_URING
 } machine_t;
 
 /* These are the valid audit failure tunable enum values */
@@ -620,6 +624,8 @@ extern int        audit_name_to_field(const char *field);
 extern const char *audit_field_to_name(int field);
 extern int        audit_name_to_syscall(const char *sc, int machine);
 extern const char *audit_syscall_to_name(int sc, int machine);
+extern const char *audit_uringop_to_name(int uringop);
+extern int        audit_name_to_uringop(const char *uringop);
 extern int        audit_name_to_flag(const char *flag);
 extern const char *audit_flag_to_name(int flag);
 extern int        audit_name_to_action(const char *action);
@@ -720,6 +726,9 @@ extern struct audit_rule_data *audit_rule_create_data(void);
 extern void audit_rule_init_data(struct audit_rule_data *rule);
 extern int audit_rule_syscallbyname_data(struct audit_rule_data *rule,
                                           const char *scall);
+extern int audit_rule_io_uringbyname_data(struct audit_rule_data *rule,
+                                          const char *scall);
+
 /* Note that the following function takes a **, where audit_rule_fieldpair()
  * takes just a *.  That structure may need to be reallocated as a result of
  * adding new fields */
